@@ -1,0 +1,148 @@
+#!/bin/sh
+#Made by Yuan Ren 04/09/2018
+#Get the file name
+filename=`echo $* | awk '{ print $NF }'`
+TOTAL_BYTES=0
+MOST_FREQUENT=0
+LARGEST_OBJECT=0
+REQUEST_PER_SECONDS=0
+UNIQUE_OBJECTS=0
+DOMAIN="en"
+helper()
+{
+	echo " -b           only print 'total bytes' stats"
+	echo " -d <domain>  if not specified, default to 'en'"
+	echo "		note: the special domain 'all' is also valid"
+	echo " -f           only print 'most frequent' stats"
+	echo " -h           print this help and exit"
+	echo " -l           only print 'largest object' stats"
+	echo " -r           only print 'requests per second' stats"
+	echo " -u           only print 'unique objects' stats"
+}
+
+while getopts :d:bfhlru opt
+do	
+	case $opt in
+	"d")
+		if  [ ${OPTARG} = '-b' ] || [ ${OPTARG} = '-d' ] || \
+			[ ${OPTARG} = '-f' ] || [ ${OPTARG} = '-h' ] || \
+			[ ${OPTARG} = '-l' ] || [ ${OPTARG} = '-r' ] || \
+			[ ${OPTARG} = '-u' ] || [ $OPTARG = $filename ] 
+		then
+			DOMAIN="en"
+		elif [ -z $OPTARG ] 
+		then
+			helper
+			exit 0
+		else
+			DOMAIN=$OPTARG
+		fi
+		;;
+	"b")
+                TOTAL_BYTES=1
+                ;;
+        "f")
+                MOST_FREQUENT=1
+                ;;
+        "h")
+                helper
+                exit 0
+                ;;
+        "l")
+                LARGEST_OBJECT=1
+                ;;
+        "r")
+                REQUEST_PER_SECONDS=1
+                ;;
+        "u")
+                UNIQUE_OBJECTS=1
+                ;;
+	"*")
+		helper
+		exit 1
+        esac
+done
+
+if [ ${TOTAL_BYTES} -eq 1 ]
+then
+        if [ ${DOMAIN} = "all" ]
+        then
+                #all total bytes
+                 total_bytes=`gzcat $filename | awk 'BEGIN{ sum=0; }\
+			 { sum += $NF; } END { print sum ; }'`
+		 echo $total_bytes
+                exit 0
+	else
+		total_bytes=`gzcat $filename  | awk 'BEGIN{ sum=0; }\
+			{ if ($0 ~ /^'${DOMAIN}'[\. ]/){ sum += $NF; }} \
+				END { print sum ; }'`
+		echo $total_bytes
+                exit 0
+        fi
+elif [ ${MOST_FREQUENT} -eq 1 ]
+then
+        if [ ${DOMAIN} = "all" ]
+        then
+                #all most frequent
+                 most_frequent=`gzcat $filename | awk '\
+			 { print $(NF - 1) " " $0}' | sort -n | tail -1 \
+				 | awk '{print $3}'`
+		 echo $most_frequent
+                exit 0
+	else
+                #specified most frequent
+                most_frequent=`gzcat $filename | awk '/^'${DOMAIN}'[\. ]/ \
+			{ print $(NF - 1) " " $0}' | sort -n | tail -1 | \
+				awk '{print $3}'`
+		echo $most_frequent
+                exit 0
+        fi
+elif [ ${LARGEST_OBJECT} -eq 1 ]
+then
+        if [ ${DOMAIN} = "all" ]
+        then
+                #all largest object
+                largest_object=`gzcat $filename  | awk '{s = $NF / $(NF - 1); \
+			if (s > l) { l = s; largest = $2; }} END { print largest; }'`
+		echo $largest_object
+                exit 0
+	else
+                #specified largest object
+                largest_object=`gzcat $filename  | awk '/^'${DOMAIN}'[\. ]/ \
+			{s = $NF / $(NF - 1); if (s > l) { l = s; largest = $2; }} \
+				END { print largest; }'`
+		echo $largest_object
+                exit 0
+        fi
+elif [ ${REQUEST_PER_SECONDS} -eq 1 ]
+then
+        if [ ${DOMAIN} = "all" ]
+        then
+                #all request per seconds
+		request_per_seconds=`gzcat $filename | awk '{ sum += $(NF - 1); } \
+			END { printf( "%.2f", sum / 3600) ; }'`
+		echo $request_per_seconds
+                exit 0
+	else
+                #specified request per seconds
+		request_per_seconds=`gzcat $filename | awk '/^'${DOMAIN}'[\. ]/ \
+			{ sum += $(NF - 1); } END { printf( "%.2f", sum / 3600) ; }'`
+		echo $request_per_seconds
+                exit 0
+        fi
+elif [ ${UNIQUE_OBJECTS} -eq 1 ]
+then
+        if [ ${DOMAIN} = "all" ]
+        then
+                #all unique object
+		unique_objects=`gzcat $filename | wc -l`
+		echo $unique_objects
+                exit 0
+	else
+                #specified unique object
+		unique_objects=`gzcat $filename | grep "^'${DOMAIN}'[\. ]" | wc -l`
+		echo $unique_objects
+                exit 0
+        fi
+fi
+

@@ -1,0 +1,14 @@
+$ wikistats -h
+ -b           only print 'total bytes' stats
+ -d <domain>  if not specified, default to 'en'
+              note: the special domain 'all' is also valid
+ -f           only print 'most frequent' stats
+ -h           print this help and exit
+ -l           only print 'largest object' stats
+ -r           only print 'requests per second' stats
+ -u           only print 'unique objects' stats
+$ wikistats -b -d fr.m pagecounts-20160802-070000.gz
+14965877981
+$ wikistats -d de.m.q -l pagecounts-20160802-070000.gz
+Johann_Wolfgang_von_Goethe
+
